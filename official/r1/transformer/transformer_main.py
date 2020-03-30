@@ -29,19 +29,19 @@ import tempfile
 from six.moves import xrange  # pylint: disable=redefined-builtin
 from absl import app as absl_app
 from absl import flags
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 # pylint: enable=g-bad-import-order
 
+from official.nlp.transformer import model_params
 from official.r1.utils import export
 from official.r1.utils import tpu as tpu_util
 from official.r1.transformer import translate
 from official.r1.transformer import transformer
 from official.r1.transformer import dataset
 from official.r1.transformer import schedule
-from official.transformer import compute_bleu
-from official.transformer.model import model_params
-from official.transformer.utils import metrics
-from official.transformer.utils import tokenizer
+from official.nlp.transformer import compute_bleu
+from official.nlp.transformer.utils import metrics
+from official.nlp.transformer.utils import tokenizer
 from official.utils.flags import core as flags_core
 from official.utils.logs import hooks_helper
 from official.utils.logs import logger
@@ -177,14 +177,15 @@ def get_train_op_and_metrics(loss, params):
 
     # Create optimizer. Use LazyAdamOptimizer from TF contrib, which is faster
     # than the TF core Adam optimizer.
-    optimizer = tf.contrib.opt.LazyAdamOptimizer(
+    from tensorflow.contrib import opt as contrib_opt  # pylint: disable=g-import-not-at-top
+    optimizer = contrib_opt.LazyAdamOptimizer(
         learning_rate,
         beta1=params["optimizer_adam_beta1"],
         beta2=params["optimizer_adam_beta2"],
         epsilon=params["optimizer_adam_epsilon"])
 
     if params["use_tpu"] and params["tpu"] != tpu_util.LOCAL:
-      optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
+      optimizer = tf.compat.v1.tpu.CrossShardOptimizer(optimizer)
 
     # Uses automatic mixed precision FP16 training if on GPU.
     if params["dtype"] == "fp16":
@@ -533,7 +534,7 @@ def construct_estimator(flags_obj, params, schedule_manager):
         model_fn=model_fn, model_dir=flags_obj.model_dir, params=params,
         config=tf.estimator.RunConfig(train_distribute=distribution_strategy))
 
-  tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+  tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
       tpu=flags_obj.tpu,
       zone=flags_obj.tpu_zone,
       project=flags_obj.tpu_gcp_project

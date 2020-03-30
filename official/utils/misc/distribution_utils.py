@@ -22,7 +22,9 @@ import json
 import os
 import random
 import string
-import tensorflow as tf
+
+from absl import logging
+import tensorflow.compat.v2 as tf
 
 from official.utils.misc import tpu_lib
 
@@ -83,7 +85,6 @@ def _mirrored_cross_device_ops(all_reduce_alg, num_packs):
 
 def get_distribution_strategy(distribution_strategy="mirrored",
                               num_gpus=0,
-                              num_workers=1,
                               all_reduce_alg=None,
                               num_packs=1,
                               tpu_address=None):
@@ -96,7 +97,6 @@ def get_distribution_strategy(distribution_strategy="mirrored",
       'off' means not to use Distribution Strategy; 'tpu' means to use
       TPUStrategy using `tpu_address`.
     num_gpus: Number of GPUs to run this model.
-    num_workers: Number of workers to run this model.
     all_reduce_alg: Optional. Specifies which algorithm to use when performing
       all-reduce. For `MirroredStrategy`, valid values are "nccl" and
       "hierarchical_copy". For `MultiWorkerMirroredStrategy`, valid values are
@@ -120,8 +120,8 @@ def get_distribution_strategy(distribution_strategy="mirrored",
   if distribution_strategy == "off":
     if num_gpus > 1:
       raise ValueError(
-          "When {} GPUs and  {} workers are specified, distribution_strategy "
-          "flag cannot be set to 'off'.".format(num_gpus, num_workers))
+          "When {} GPUs are specified, distribution_strategy "
+          "flag cannot be set to 'off'.".format(num_gpus))
     return None
 
   if distribution_strategy == "tpu":
@@ -254,7 +254,7 @@ class SyntheticIterator(object):
 def _monkey_patch_dataset_method(strategy):
   """Monkey-patch `strategy`'s `make_dataset_iterator` method."""
   def make_dataset(self, dataset):
-    tf.compat.v1.logging.info('Using pure synthetic data.')
+    logging.info('Using pure synthetic data.')
     with self.scope():
       if self.extended._global_batch_size:  # pylint: disable=protected-access
         return SyntheticDataset(dataset, self.num_replicas_in_sync)
